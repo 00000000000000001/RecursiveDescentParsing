@@ -1,0 +1,193 @@
+Recursive Descent Parsing
+
+https://youtu.be/SToUyjAsaFk
+
+EXAMPLE INPUT
+
+	A+(B-C)
+
+IDs (set names): A, B, C, ...
+Infix Operators: +,-,&
+Parens: (,)
+
+GRAMMAR
+https://web.stanford.edu/class/archive/cs/cs103/cs103.1156/tools/cfg/
+
+Start symbol: S
+S → F+S | F-S | F&S | F
+F → ID | (S)
+
+TOKENS
+ID	char{char}
+
+LEXICAL ANALYSIS
+Code
+	function scanToken()
+Scans the input and sets nextToken to point to the newly scanned token.
+
+Variable
+	nextToken	 
+
+OOP
+	class ID
+	class Union
+	class Intersect
+	class Subtract
+
+CLASSES
+class TreeNode
+	class ID
+	class Union
+	class Intersect
+	class Subtract
+
+Infix Operator
+	class Union{
+		TreeNode left;
+		TreeNode right;
+	}
+
+PRINTING  A TREE
+
+Each class implements a print method
+
+class TreeNode{
+		TreeNode left;
+		TreeNode right;
+
+}
+
+class Union extends TreeNode{
+
+		String toString(){
+			return "(" + left.toString() + " + " + right.toString() + ")"; // recursive calls to print the sub-trees
+		}
+
+	}
+
+EVALUATEING THE EXPRESSION
+
+Each class implements an eval method.
+It returns Value of expression
+
+In the Union.eval method:
+	return FileSets.operation(left.eval(), right.eval(), "union");
+
+In the ID.eval method:
+	... Figure out the current value and return it.
+
+PARSING ALGORITHM
+
+Functions
+One for each non-terminal grammar symbol	
+
+	parseS()
+	parseF()
+
+
+Each will
+Scan a bunch of tokens.
+Return a pointer to the tree it builds  
+
+
+Details
+At any moment, nextToken will contain the next UNSCANNED thing from the input.
+Call scanToken() to advance. 
+Return null if problems.
+
+MAIN
+
+ Variables:
+	nextToken
+	resultTree
+
+Code:
+	scanToken()
+	resultTree = parseS()
+	if nextToken != '\0' // "(A+B))C" would be an error
+		ERROR
+		...
+	resultTree.print()
+		...
+	print(resultTree.eval())
+
+ParseF
+	F → ID | (S)
+
+if nextToken is ID
+	return nextToken // return class ID{}
+else if nextToken is "("
+	scanToken()
+	a = parseS()
+	if(a == null)
+		return null
+	if(nextToken.equals(")")
+		scanToken()
+		return a
+	else
+		return null
+else
+	return null
+
+ParseS
+	S → F+S | F-S | F&S | F
+
+First attempt...
+
+a = parseF()
+if nextToken == "+"
+	scanToken()
+	b = parseS()
+	c = new Union(a,b)
+	return c
+else if nextToken == "-"
+	scanToken()
+	b = parseS()
+	c = new Subtract(a,b)
+	return c
+else if nextToken == "&"
+	scanToken()
+	b = parseS()
+	c = new Intersect(a,b)
+	return c
+else
+	return a
+
+PROBLEM: INCORRECT ASSOZIATIVITY
+	S → ... | F-S | ...
+
+From parseS code:
+
+a = parseF()
+if ...
+	...
+else if ...
+	b = parseS()
+	c = new Subtract(a,b)
+	return c
+	...
+...
+
+Input: A - B + C // meaning: (A - B) + C
+
+Call to parseS: A - <...E...>
+
+Final Result: ... // meaning: A - (B + C)
+
+SOLUTION
+	S → F{+|-F}  
+
+ParseS
+
+a = parseF()
+while true
+	if nextToken == "+"
+		scanToken()
+		b = parseF()
+		a = new Union(a,b)
+	else if nextToken == "-"
+		scanToken()
+		b = parseF()
+		a = new Subtract(a,b)
+	else
+		return a
